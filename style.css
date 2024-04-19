@@ -1,0 +1,81 @@
+*
+{
+    margin: 0;
+    font-family: "Jersey 10", Arial, Helvetica, sans-serif;
+}
+
+.split
+{
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    height: 100dvh;
+    
+    overflow-y: hidden;
+   
+}
+.score
+{
+    height: 75px;
+    width: 200px;
+    background-color: #0066cc;
+    color: #333;
+    font-size: 50px;
+    border: #99cc00 1px solid;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+    margin: 50px 0px 10px 0px;
+    
+    
+   
+}
+
+.leftSplit, .rightSplit
+{
+    display:flex;
+    justify-content: start;
+    flex-direction: column;
+    align-items: center;
+
+}
+.midSplit
+{
+    /* lub relative, w zależności od kontekstu */
+    bottom: 0;
+    
+}
+
+
+.sides
+{
+    background-image: linear-gradient(to top left, #753682 0%, #bf2e34 100%);
+    
+}
+.play
+{
+
+font-weight: 200;
+font-size: 3rem;
+color: #ebeb00;
+background: linear-gradient(90deg, #cad622 0%, #c500cc 100%);
+padding: 8px 30px;
+border: solid #99cc00 1px;
+box-shadow: rgb(242, 242, 22) 5px 5px 25px 5px;
+border-radius: 50px;
+transition : 1000ms;
+transform: translateY(0);
+display: flex;
+align-items: center;
+cursor: pointer;
+margin-top: 50px;
+
+}
+
+.scoreText
+{
+color: #cad622;
+    font-size: 3rem;
+
+}
+
