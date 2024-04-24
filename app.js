@@ -1,5 +1,7 @@
 import { style } from "./pixieStyle.js";
 
+import "./page.js";
+
 const Application = PIXI.Application;
 export const app = new Application({
   width: 960,
@@ -9,3 +11,5 @@ export const app = new Application({
   antialias: true,
 });
 document.querySelector(".midSplit").appendChild(app.view);
+
+window.__PIXI_INSPECTOR_GLOBAL_HOOK__ &&  window.__PIXI_INSPECTOR_GLOBAL_HOOK__.register({ PIXI: PIXI });
