@@ -21,17 +21,23 @@ class tetrominoShape {
   }
 }
 
-const shapeI = [[1], [1], [1], [1]];
+const shapeI = [[1, 1, 1, 1]];
 const shapeO = [
   [1, 1],
   [1, 1],
 ];
-const shapeL = [[1], [1], [1, 1]];
+const shapeL = [
+  [1, 0, 0],
+  [1, 1, 1],
+];
 const shapeT = [
   [0, 1, 0],
   [1, 1, 1],
 ];
-const shapeZ = [[1], [1, 1], [0, 1]];
+const shapeZ = [
+  [1, 1, 0],
+  [0, 1, 1],
+];
 
 const TetrominoI = new tetrominoShape(1, shapeI, 0x40e0d0);
 const TetrominoL = new tetrominoShape(2, shapeL, 0x00008b);
@@ -74,7 +80,7 @@ class Tetromino {
     this.cellSize = cellSize;
     this.color = color;
     this.shape = shape;
-    this.x = Math.floor(gridSizeX / 2) - 1;
+    this.x = Math.floor(gridSizeX / 2) - Math.ceil(this.getMaxCol() / 2);
     this.y = 0;
     this.blocks = [];
     this.initShape();
@@ -106,62 +112,71 @@ class Tetromino {
   }
 
   moveLeft() {
-    // Przesuwamy tetromino o 1 w lewo tylko jeśli nie wychodzi poza lewą krawędź siatki
-    if (this.x > 0 && !this.checkCollision(-1, 0)) {
+    if (!this.checkCollision(-1, 0)) {
       this.x -= 1;
-      // Usuwamy stare bloki tetromino
-      this.blocks.forEach((block) => {
-        gridContainer.removeChild(block);
-      });
-      this.blocks = []; // Czyszczenie tablicy bloków
-      // Inicjujemy ponownie tetromino z nowymi współrzędnymi x
-      this.initShape();
+      this.updatePosition();
     }
   }
 
   moveRight() {
-    // Przesuwamy tetromino o 1 w prawo tylko jeśli nie wychodzi poza prawą krawędź siatki
-    if (this.x + this.getMaxCol() < gridSizeX && !this.checkCollision(1, 0)) {
+    if (!this.checkCollision(1, 0)) {
       this.x += 1;
-      // Usuwamy stare bloki tetromino
-      this.blocks.forEach((block) => {
-        gridContainer.removeChild(block);
-      });
-      this.blocks = []; // Czyszczenie tablicy bloków
-      // Inicjujemy ponownie tetromino z nowymi współrzędnymi x
-      this.initShape();
+      this.updatePosition();
     }
   }
 
   moveDown() {
-    // Sprawdzamy, czy tetromino nie dotarło do dna siatki
-    if (this.y + this.getMaxRow() < gridSizeY && !this.checkCollision(0, 1)) {
+    if (!this.checkCollision(0, 1)) {
       this.y += 1;
-      // Usuwamy stare bloki tetromino
-      this.blocks.forEach((block) => {
-        gridContainer.removeChild(block);
-      });
-      this.blocks = []; // Czyszczenie tablicy bloków
-      // Inicjujemy ponownie tetromino z nowymi współrzędnymi y
-      this.initShape();
+      this.updatePosition();
     } else {
-      // Jeśli tetromino dotarło do dna, zatrzymujemy automatyczne opadanie
-      stopAutoDrop();
-      // Usuwamy nasłuchiwania klawiatury
-      document.removeEventListener("keydown", moveKeyListener);
-      console.log("Tetromino dotarło do dna!");
-      // Generujemy nowe tetromino
+      this.lockTetromino();
       generateTetromino();
     }
   }
 
+  hardDrop() {
+    while (!this.checkCollision(0, 1)) {
+      this.y += 1;
+    }
+    this.updatePosition();
+    this.lockTetromino();
+    generateTetromino();
+  }
+
+  rotate() {
+    const newShape = this.shape[0].map((_, colIndex) =>
+      this.shape.map((row) => row[colIndex]).reverse()
+    );
+    if (!this.checkCollision(0, 0, newShape)) {
+      this.shape = newShape;
+      this.updatePosition();
+    }
+  }
+
+  updatePosition() {
+    this.blocks.forEach((block) => {
+      gridContainer.removeChild(block);
+    });
+    this.blocks = [];
+    this.initShape();
+  }
+
+  lockTetromino() {
+    this.blocks.forEach((block) => {
+      const col = Math.floor(block.x / this.cellSize);
+      const row = Math.floor(block.y / this.cellSize);
+      grid[row][col].fillColor = this.color;
+      grid[row][col].isEmpty = false;
+    });
+    this.blocks = [];
+  }
+
   getMaxRow() {
-    // Znajdujemy największą liczbę rzędów zajętych przez tetromino
     return this.shape.length;
   }
 
   getMaxCol() {
-    // Znajdujemy największą liczbę kolumn zajętych przez tetromino
     let maxCol = 0;
     this.shape.forEach((row) => {
       maxCol = Math.max(maxCol, row.length);
@@ -169,42 +184,37 @@ class Tetromino {
     return maxCol;
   }
 
-  // Metoda sprawdzająca kolizje
-  checkCollision(deltaX, deltaY) {
-    for (let row = 0; row < this.shape.length; row++) {
-      for (let col = 0; col < this.shape[row].length; col++) {
-        if (this.shape[row][col] !== 0) {
+  checkCollision(deltaX, deltaY, newShape = this.shape) {
+    for (let row = 0; row < newShape.length; row++) {
+      for (let col = 0; col < newShape[row].length; col++) {
+        if (newShape[row][col] !== 0) {
           const targetX = this.x + col + deltaX;
           const targetY = this.y + row + deltaY;
-          // Sprawdzamy, czy nowa pozycja tetromino nakłada się na istniejący blok siatki
           if (
             targetX < 0 ||
             targetX >= gridSizeX ||
             targetY >= gridSizeY ||
-            (targetY >= 0 && grid[targetY][targetX].fillColor !== 0x808080)
+            (targetY >= 0 && !grid[targetY][targetX].isEmpty)
           ) {
-            return true; // Kolizja
+            return true;
           }
         }
       }
     }
-    return false; // Brak kolizji
+    return false;
   }
 }
 
-// Funkcja rozpoczynająca automatyczne opadanie tetromino
 const startAutoDrop = function () {
   return setInterval(() => {
     currentTetromino.moveDown();
-  }, 1000); // Zmniejsz szybkość opadania zmieniając tę wartość
+  }, 1000);
 };
 
-// Funkcja zatrzymująca automatyczne opadanie tetromino
 const stopAutoDrop = function () {
   clearInterval(autoDropIntervalId);
 };
 
-// Funkcja obsługująca nasłuchiwanie klawiatury
 const moveKeyListener = (event) => {
   switch (event.key) {
     case "ArrowLeft":
@@ -216,32 +226,30 @@ const moveKeyListener = (event) => {
     case "ArrowDown":
       currentTetromino.moveDown();
       break;
+    case "ArrowUp":
+      currentTetromino.rotate();
+      break;
+    case "Space":
+      currentTetromino.hardDrop();
+      break;
   }
 };
 
-//losowanie jakie tetromino się pojawi
 const getTetromino = function () {
   const randomNumber = Math.floor(Math.random() * 5) + 1;
-  console.log(randomNumber);
   switch (randomNumber) {
     case 1:
       return TetrominoI;
-      break;
     case 2:
       return TetrominoL;
-      break;
     case 3:
       return TetrominoO;
-      break;
     case 4:
       return TetrominoZ;
-      break;
     case 5:
       return TetrominoT;
-      break;
   }
 };
-//generowanie wylosowanego tetromino
 
 export const generateTetromino = function () {
   const tetrominoHelp = getTetromino();
@@ -252,10 +260,8 @@ export const generateTetromino = function () {
     tetrominoHelp.shape
   );
 
-  // Rozpocznij automatyczne opadanie tetromino
   autoDropIntervalId = startAutoDrop();
 
-  // Dodaj nasłuchiwanie klawiatury tylko jeśli tetromino nie dotarło jeszcze do dna
   if (currentTetromino.y + currentTetromino.getMaxRow() < gridSizeY) {
     document.addEventListener("keydown", moveKeyListener);
   }
