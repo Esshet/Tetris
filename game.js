@@ -170,6 +170,7 @@ class Tetromino {
       grid[row][col].isEmpty = false;
     });
     this.blocks = [];
+    stopAutoDrop(); // Zatrzymanie automatycznego opadania
   }
 
   getMaxRow() {
@@ -235,23 +236,25 @@ const moveKeyListener = (event) => {
   }
 };
 
+const tetrominoes = [
+  TetrominoI,
+  TetrominoL,
+  TetrominoO,
+  TetrominoZ,
+  TetrominoT,
+];
+
 const getTetromino = function () {
-  const randomNumber = Math.floor(Math.random() * 5) + 1;
-  switch (randomNumber) {
-    case 1:
-      return TetrominoI;
-    case 2:
-      return TetrominoL;
-    case 3:
-      return TetrominoO;
-    case 4:
-      return TetrominoZ;
-    case 5:
-      return TetrominoT;
+  // Fisher-Yates shuffle
+  for (let i = tetrominoes.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tetrominoes[i], tetrominoes[j]] = [tetrominoes[j], tetrominoes[i]];
   }
+  return tetrominoes[0]; // Zwróć pierwsze tetromino z przetasowanej tablicy
 };
 
 export const generateTetromino = function () {
+  stopAutoDrop(); // Zatrzymanie poprzedniego interwału przed wygenerowaniem nowego Tetromino
   const tetrominoHelp = getTetromino();
   currentTetromino = new Tetromino(
     grid,
@@ -266,3 +269,6 @@ export const generateTetromino = function () {
     document.addEventListener("keydown", moveKeyListener);
   }
 };
+
+// Uruchomienie pierwszego Tetromino
+generateTetromino();
