@@ -3,7 +3,11 @@ const gridSizeX = 10; // Liczba kolumn
 const gridSizeY = 20; // Liczba rzędów
 const cellSize = 40; // Rozmiar każdego kwadratu
 let currentTetromino;
+let nextTetromino;
 let autoDropIntervalId;
+let score = 0;
+let linesCleared = 0;
+let level = 1;
 
 const gridWidth = gridSizeX * cellSize;
 const gridHeight = gridSizeY * cellSize;
@@ -87,7 +91,6 @@ class Tetromino {
   }
 
   initShape() {
-    // Usuń tetromino z kontenera przed zainicjowaniem nowego kształtu
     for (let row = 0; row < this.shape.length; row++) {
       for (let col = 0; col < this.shape[row].length; col++) {
         if (this.shape[row][col] !== 0) {
@@ -170,7 +173,8 @@ class Tetromino {
       grid[row][col].isEmpty = false;
     });
     this.blocks = [];
-    stopAutoDrop(); // Zatrzymanie automatycznego opadania
+    checkFullLines(); // Sprawdzenie pełnych linii po zablokowaniu Tetromino
+    stopAutoDrop();
   }
 
   getMaxRow() {
@@ -206,10 +210,10 @@ class Tetromino {
   }
 }
 
-const startAutoDrop = function () {
+const startAutoDrop = function (interval = 1000) {
   return setInterval(() => {
     currentTetromino.moveDown();
-  }, 1000);
+  }, interval);
 };
 
 const stopAutoDrop = function () {
@@ -245,6 +249,13 @@ const tetrominoes = [
 ];
 
 const getTetromino = function () {
+  const tetrominoes = [
+    TetrominoI,
+    TetrominoL,
+    TetrominoO,
+    TetrominoZ,
+    TetrominoT,
+  ];
   // Fisher-Yates shuffle
   for (let i = tetrominoes.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -253,22 +264,91 @@ const getTetromino = function () {
   return tetrominoes[0]; // Zwróć pierwsze tetromino z przetasowanej tablicy
 };
 
-export const generateTetromino = function () {
-  stopAutoDrop(); // Zatrzymanie poprzedniego interwału przed wygenerowaniem nowego Tetromino
-  const tetrominoHelp = getTetromino();
-  currentTetromino = new Tetromino(
-    grid,
-    cellSize,
-    tetrominoHelp.colour,
-    tetrominoHelp.shape
-  );
+const isGameOver = function () {
+  return grid[0].some((cell) => !cell.isEmpty);
+};
 
-  autoDropIntervalId = startAutoDrop();
-
-  if (currentTetromino.y + currentTetromino.getMaxRow() < gridSizeY) {
+const generateTetromino = function () {
+  stopAutoDrop();
+  if (isGameOver()) {
+    alert("Game Over! Your score: " + score);
+    location.reload(); // Restart gry
+  } else {
+    currentTetromino =
+      nextTetromino ||
+      new Tetromino(
+        grid,
+        cellSize,
+        getTetromino().colour,
+        getTetromino().shape
+      );
+    nextTetromino = new Tetromino(
+      grid,
+      cellSize,
+      getTetromino().colour,
+      getTetromino().shape
+    );
+    autoDropIntervalId = startAutoDrop();
     document.addEventListener("keydown", moveKeyListener);
   }
 };
 
-// Uruchomienie pierwszego Tetromino
+const updateScore = function (lines) {
+  const points = [0, 100, 300, 500, 800]; // Punkty za 1, 2, 3 i 4 linie naraz
+  score += points[lines];
+  linesCleared += lines;
+  if (linesCleared >= level * 10) {
+    level++;
+    clearInterval(autoDropIntervalId);
+    autoDropIntervalId = startAutoDrop(1000 - (level - 1) * 100);
+  }
+  // Aktualizacja interfejsu użytkownika z wynikiem i poziomem
+  document.getElementById("score").innerText = "Score: " + score;
+  document.getElementById("level").innerText = "Level: " + level;
+};
+
+const checkFullLines = function () {
+  let lines = 0;
+  for (let row = gridSizeY - 1; row >= 0; row--) {
+    if (grid[row].every((cell) => !cell.isEmpty)) {
+      removeLine(row);
+      lines++;
+      row++;
+    }
+  }
+  if (lines > 0) {
+    updateScore(lines);
+  }
+};
+
+const removeLine = function (rowToRemove) {
+  for (let col = 0; col < gridSizeX; col++) {
+    grid[rowToRemove][col].graphics.clear();
+    grid[rowToRemove][col].graphics.beginFill(0x808080);
+    grid[rowToRemove][col].graphics.drawRect(0, 0, cellSize, cellSize);
+    grid[rowToRemove][col].graphics.endFill();
+  }
+
+  for (let row = rowToRemove; row > 0; row--) {
+    for (let col = 0; col < gridSizeX; col++) {
+      grid[row][col].fillColor = grid[row - 1][col].fillColor;
+      grid[row][col].isEmpty = grid[row - 1][col].isEmpty;
+      grid[row][col].graphics.clear();
+      grid[row][col].graphics.beginFill(grid[row][col].fillColor);
+      grid[row][col].graphics.drawRect(0, 0, cellSize, cellSize);
+      grid[row][col].graphics.endFill();
+    }
+  }
+
+  for (let col = 0; col < gridSizeX; col++) {
+    grid[0][col].fillColor = 0x808080;
+    grid[0][col].isEmpty = true;
+    grid[0][col].graphics.clear();
+    grid[0][col].graphics.beginFill(0x808080);
+    grid[0][col].graphics.drawRect(0, 0, cellSize, cellSize);
+    grid[0][col].graphics.endFill();
+  }
+};
+
+// Inicjalizacja pierwszego Tetromino
 generateTetromino();
